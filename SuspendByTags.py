@@ -39,15 +39,15 @@ myFunctions={
 
 myPictures = {
 ('Maths',''):'Maths.png',
-('Maths','un'):'UnMaths.png',
+('Maths','un'):'NoMaths.png',
 ('Physics',''):'Physics.png',
-('Physics','un'):'UnPhysics.png',
+('Physics','un'):'NoPhysics.png',
 ('SI',''):'SI.png',
-('SI','un'):'UnSI.png',
+('SI','un'):'NoSI.png',
 ('French',''):'French.png',
-('French','un'):'UnFrench.png',
+('French','un'):'NoFrench.png',
 ('English',''):'English.png',
-('English','un'):'UnEnglish.png'
+('English','un'):'NoEnglish.png'
 }
 
 def swith(string):
@@ -67,7 +67,7 @@ mw.mainWin.myActions = {}
 for string in myDict.iterkeys():
     for prefix in ['','un']:
         myPictures[(string,prefix,'icon')] = QtGui.QIcon()
-        myPictures[(string,prefix,'icon')].addPixmap(QtGui.QPixmap(os.path.join(os.path.dirname(__file__ ),myPictures[(string,prefix)])), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        myPictures[(string,prefix,'icon')].addPixmap(QtGui.QPixmap(os.path.join(os.path.dirname(__file__ ),"Icons",myPictures[(string,prefix)])), QtGui.QIcon.Normal, QtGui.QIcon.Off)
 
     mw.mainWin.myActions[string] = QtGui.QAction(string + ' / no ' + string, mw)
     mw.mainWin.myActions[string] .setStatusTip('Suspend/Unsuspend')
