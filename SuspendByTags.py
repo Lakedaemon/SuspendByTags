@@ -7,31 +7,49 @@
 from PyQt4 import QtGui, QtCore
 import os 
 from ankiqt import mw
-from anki.utils import addTags,deleteTags
+from anki.utils import addTags,deleteTags,parseTags
 
 myDict = {
-'French':'french',
+'French':u'french français',
 'Maths':'math maths',
 'English':'english anglais',
 'Physics':'physique',
 'SI':'si'
 }
+# I'm using 2 different ways to suspend cards in this plugin... this brings 2 different colors in the fact browser...strange...which one is the best ? the red one looks faster (anki level suspend <> sqllite level suspend)
+
+def block(string):
+    query = """select cards.Id from cardTags, tags, cards
+                 where cardTags.tagId = tags.id and cards.Id= cardTags.cardId and cards.type = 2 
+                 and tags.tag in ('%(tags)s') group by cardTags.cardId
+                 """ % {'tags':"','".join(parseTags(myDict[string]))}
+    cards = list(mw.deck.s.column0(query))
+    mw.deck.suspendCards(cards)
+         
+def unblock(string):
+    query = """select cards.Id from cardTags, tags, cards
+                 where cardTags.tagId = tags.id and cards.Id= cardTags.cardId and cards.type = 2 
+                 and tags.tag in ('%(tags)s') group by cardTags.cardId
+                 """ % {'tags':"','".join(parseTags(myDict[string]))}
+    cards = list(mw.deck.s.column0(query))
+    mw.deck.unsuspendCards(cards)
 
 def switch(string): 
     myAction = mw.mainWin.__getattribute__('action'+ string)
     if mw.config['SBT_'+ string] == 0:
-            mw.deck.lowPriority = addTags(myDict[string],mw.deck.lowPriority)
+            block(string)
+            #mw.deck.lowPriority = addTags(myDict[string],mw.deck.lowPriority)
             myAction.setIcon(myPictures['NoNew'+string])
     elif mw.config['SBT_'+ string] == 1:
-            mw.deck.lowPriority = deleteTags(myDict[string],mw.deck.lowPriority)
+            #mw.deck.lowPriority = deleteTags(myDict[string],mw.deck.lowPriority)
             mw.deck.suspended  = addTags(myDict[string],mw.deck.suspended)
             myAction.setIcon(myPictures['No'+string])
     else:
+            unblock(string)
             mw.deck.suspended = deleteTags(myDict[string],mw.deck.suspended)
             myAction.setIcon(myPictures[string])
     mw.config['SBT_'+ string] = (mw.config['SBT_'+ string] + 1) % 3        
     mw.deck.updateAllPriorities()        
-    #mw.help.showText("LowPriority :<br>" + mw.deck.lowPriority + "<br><br>Suspended :<br>" + mw.deck.suspended )
 
 
 myPictures = {}
@@ -69,7 +87,8 @@ def newLoadDeck(deckPath, sync=True, interactive=True, uprecent=True,media=None)
                 myAction.setStatusTip(string)
                 pass  
             elif mw.config['SBT_'+ string] == 1:
-                mw.deck.lowPriority  = addTags(myDict[string],mw.deck.lowPriority)  
+                block(string)
+                #mw.deck.lowPriority  = addTags(myDict[string],mw.deck.lowPriority)  
                 myAction.setStatusTip('No new '+string)
             else:
                 mw.deck.suspended  = addTags(myDict[string],mw.deck.suspended)  
