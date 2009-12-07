@@ -9,91 +9,72 @@ import os
 from ankiqt import mw
 from anki.utils import addTags,deleteTags
 
-
-def onEnglish():
-    swith('English')
-def onFrench():
-    swith('French')
-def onSI():
-    swith('SI')
-def onMaths():
-    swith('Maths')
-def onPhysics():
-    swith('Physics')
-    
 myDict = {
 'French':'french',
 'Maths':'math maths',
 'English':'english anglais',
 'Physics':'physique',
-'SI':u'si'
+'SI':'si'
 }
 
-myFunctions={
-'English':onEnglish,
-'French':onFrench,
-'SI':onSI,
-'Maths':onMaths,
-'Physics':onPhysics
-}
-
-myPictures = {
-('Maths',''):'Maths.png',
-('Maths','un'):'NoMaths.png',
-('Physics',''):'Physics.png',
-('Physics','un'):'NoPhysics.png',
-('SI',''):'SI.png',
-('SI','un'):'NoSI.png',
-('French',''):'French.png',
-('French','un'):'NoFrench.png',
-('English',''):'English.png',
-('English','un'):'NoEnglish.png'
-}
-
-def swith(string):
-    mw.config['SBT_'+ string] = not(mw.config.setdefault('SBT_'+ string,False))
-    if mw.config['SBT_'+ string]:
-            mw.deck.suspended = addTags(mw.deck.suspended,myDict[string])
-            mw.mainWin.myActions[string].setIcon(myPictures[(string,'','icon')])
+def switch(string): 
+    myAction = mw.mainWin.__getattribute__('action'+ string)
+    if mw.config['SBT_'+ string] == 0:
+            mw.deck.lowPriority = addTags(myDict[string],mw.deck.lowPriority)
+            myAction.setIcon(myPictures['NoNew'+string])
+    elif mw.config['SBT_'+ string] == 1:
+            mw.deck.lowPriority = deleteTags(myDict[string],mw.deck.lowPriority)
+            mw.deck.suspended  = addTags(myDict[string],mw.deck.suspended)
+            myAction.setIcon(myPictures['No'+string])
     else:
-            mw.deck.suspended = deleteTags(mw.deck.suspended,myDict[string])
-            mw.mainWin.myActions[string].setIcon(myPictures[(string,'un','icon')])
+            mw.deck.suspended = deleteTags(myDict[string],mw.deck.suspended)
+            myAction.setIcon(myPictures[string])
+    mw.config['SBT_'+ string] = (mw.config['SBT_'+ string] + 1) % 3        
     mw.deck.updateAllPriorities()        
-    mw.help.showText(str(mw.deck.suspended))
+    #mw.help.showText("LowPriority :<br>" + mw.deck.lowPriority + "<br><br>Suspended :<br>" + mw.deck.suspended )
 
 
-
+myPictures = {}
 mw.mainWin.myActions = {}
 for string in myDict.iterkeys():
-    for prefix in ['','un']:
-        myPictures[(string,prefix,'icon')] = QtGui.QIcon()
-        myPictures[(string,prefix,'icon')].addPixmap(QtGui.QPixmap(os.path.join(os.path.dirname(__file__ ),"Icons",myPictures[(string,prefix)])), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-
-    mw.mainWin.myActions[string] = QtGui.QAction(string + ' / no ' + string, mw)
-    mw.mainWin.myActions[string] .setStatusTip('Suspend/Unsuspend')
-    mw.mainWin.myActions[string] .setEnabled(not not mw.deck)
-    mw.connect(mw.mainWin.myActions[string] , QtCore.SIGNAL('triggered()'), myFunctions[string])    
-
+    exec """def on%s():switch('%s')""" % (string,string)
+    for prefix in ['','NoNew','No']:
+        myPictures[prefix+string] = QtGui.QIcon()
+        myPictures[prefix+string].addPixmap(QtGui.QPixmap(os.path.join(os.path.dirname(__file__ ),"Icons",prefix+string+'.png')), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+    mw.mainWin.__setattr__('action'+ string, QtGui.QAction(string, mw))
+    myAction = mw.mainWin.__getattribute__('action'+ string)
+    myAction.setEnabled(not not mw.deck)
+    mw.connect(myAction , QtCore.SIGNAL('triggered()'), eval ('on' +string))    
     # creates Suspend/Unsuspend Action
-    if mw.config['SBT_'+ string]:
-        mw.mainWin.myActions[string].setIcon(myPictures[(string,'','icon')])
+    if mw.config['SBT_'+ string] == 0:
+        myAction.setIcon(myPictures[string])      
+    elif mw.config['SBT_'+ string] == 1:
+        myAction.setIcon(myPictures['NoNew'+string])    
     else:
-        mw.mainWin.myActions[string].setIcon(myPictures[(string,'un','icon')])        
-    mw.mainWin.myActions[string].setObjectName(string)
-
-
-
+        myAction.setIcon(myPictures['No'+string])     
+    myAction.setObjectName(string)
     # adds the Suspend/Unsuspend icon in the Anki Toolbar
-	
-    mw.mainWin.toolBar.addAction(mw.mainWin.myActions[string])
+    mw.mainWin.toolBar.addAction(myAction)
   
-
-mw.mainWin.actionMaths = mw.mainWin.myActions['Maths']
-mw.mainWin.actionPhysics = mw.mainWin.myActions['Physics']
-mw.mainWin.actionSI = mw.mainWin.myActions['SI']
-mw.mainWin.actionFrench = mw.mainWin.myActions['French']
-mw.mainWin.actionEnglish = mw.mainWin.myActions['English']  
-
 mw.deckRelatedMenuItems = mw.deckRelatedMenuItems + tuple(myDict.iterkeys())
-# to enable or disable Jstats whenever a deck is opened/closed
 
+oldLoadDeck = mw.loadDeck
+
+def newLoadDeck(deckPath, sync=True, interactive=True, uprecent=True,media=None):
+    code = oldLoadDeck(deckPath, sync, interactive, uprecent,media)
+    if code and mw.deck:
+        for string in myDict.iterkeys():
+            myAction = mw.mainWin.__getattribute__('action'+ string)
+            if mw.config['SBT_'+ string] == 0:
+                myAction.setStatusTip(string)
+                pass  
+            elif mw.config['SBT_'+ string] == 1:
+                mw.deck.lowPriority  = addTags(myDict[string],mw.deck.lowPriority)  
+                myAction.setStatusTip('No new '+string)
+            else:
+                mw.deck.suspended  = addTags(myDict[string],mw.deck.suspended)  
+                myAction.setStatusTip('No '+string)
+        mw.deck.updateAllPriorities()     
+    return code
+
+mw.loadDeck = newLoadDeck
