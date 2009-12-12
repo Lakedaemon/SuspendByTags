@@ -36,11 +36,12 @@ def unblock(string):
 
 def switch(string): 
     myAction = mw.mainWin.__getattribute__('action'+ string)
-    if mw.config['SBT_'+ string] == 0:
+    choice = mw.config.get('SBT_'+ string,0)
+    if choice == 0:
             block(string)
             #mw.deck.lowPriority = addTags(myDict[string],mw.deck.lowPriority)
             myAction.setIcon(myPictures['NoNew'+string])
-    elif mw.config['SBT_'+ string] == 1:
+    elif choice == 1:
             #mw.deck.lowPriority = deleteTags(myDict[string],mw.deck.lowPriority)
             mw.deck.suspended  = addTags(myDict[string],mw.deck.suspended)
             myAction.setIcon(myPictures['No'+string])
@@ -48,7 +49,7 @@ def switch(string):
             unblock(string)
             mw.deck.suspended = deleteTags(myDict[string],mw.deck.suspended)
             myAction.setIcon(myPictures[string])
-    mw.config['SBT_'+ string] = (mw.config['SBT_'+ string] + 1) % 3        
+    mw.config['SBT_'+ string] = (choice + 1) % 3        
     mw.deck.updateAllPriorities()        
 
 
@@ -64,9 +65,10 @@ for string in myDict.iterkeys():
     myAction.setEnabled(not not mw.deck)
     mw.connect(myAction , QtCore.SIGNAL('triggered()'), eval ('on' +string))    
     # creates Suspend/Unsuspend Action
-    if mw.config['SBT_'+ string] == 0:
+    choice = mw.config.get('SBT_'+ string,0)
+    if choice == 0:
         myAction.setIcon(myPictures[string])      
-    elif mw.config['SBT_'+ string] == 1:
+    elif choice == 1:
         myAction.setIcon(myPictures['NoNew'+string])    
     else:
         myAction.setIcon(myPictures['No'+string])     
@@ -83,10 +85,11 @@ def newLoadDeck(deckPath, sync=True, interactive=True, uprecent=True,media=None)
     if code and mw.deck:
         for string in myDict.iterkeys():
             myAction = mw.mainWin.__getattribute__('action'+ string)
-            if mw.config['SBT_'+ string] == 0:
+            choice = mw.config.get('SBT_'+ string,0)
+            if choice == 0:
                 myAction.setStatusTip(string)
                 pass  
-            elif mw.config['SBT_'+ string] == 1:
+            elif choice == 1:
                 block(string)
                 #mw.deck.lowPriority  = addTags(myDict[string],mw.deck.lowPriority)  
                 myAction.setStatusTip('No new '+string)
